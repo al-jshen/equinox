@@ -19,6 +19,7 @@ import jax.core
 import jax.interpreters.ad as ad
 import jax.numpy as jnp
 import jax.tree_util as jtu
+import jax.experimental.sparse as sparse
 from jaxtyping import Array, ArrayLike, Complex, Float, PyTree, PyTreeDef
 
 from ._custom_types import sentinel
@@ -50,12 +51,12 @@ class _ValueAndGradWrapper(Module):
         return self._fun
 
     def __call__(self, x, /, *args, **kwargs):
-        @ft.partial(jax.value_and_grad, has_aux=self._has_aux, **self._gradkwargs)
+        @ft.partial(sparse.value_and_grad, has_aux=self._has_aux, **self._gradkwargs)
         def fun_value_and_grad(_diff_x, _nondiff_x, *_args, **_kwargs):
             _x = combine(_diff_x, _nondiff_x)
             return self._fun(_x, *_args, **_kwargs)
 
-        diff_x, nondiff_x = partition(x, is_inexact_array)
+        diff_x, nondiff_x = partition(x, is_array)
         return fun_value_and_grad(diff_x, nondiff_x, *args, **kwargs)
 
     def __get__(self, instance, owner):
